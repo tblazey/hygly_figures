@@ -1,0 +1,3 @@
+Anatomical Template: https://www.bic.mni.mcgill.ca/ServicesAtlases/ICBM152NLin2009 (ICBM 2009a Nonlinear Symmetric)
+Human Brain Cell Atlas: https://github.com/linnarsson-lab/adult-human-brain
+Allen Brain Atlas: https://human.brain-map.org
