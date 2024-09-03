@@ -43,31 +43,31 @@ ratio_img[ratio_img == 0] = np.nan
 fig, ax = plt.subplots(1, 3, figsize=(16, 8), gridspec_kw={'width_ratios':[1, 1, 1]})
 
 # Add HK1 image
-hk = ax[0].matshow(np.rot90(hk1_img[:, :, 96]), cmap='plasma')
+hk = ax[0].matshow(np.rot90(hk1_img[25:170, 25:205, 96]), cmap='plasma')
 ax[0].set_title('HK1', fontweight='bold', fontsize=28)
-ax[0].text(0, 1.065, 'A)', weight='bold', size=36, transform=ax[0].transAxes)
+ax[0].text(-0.2, 1.2, 'A)', weight='bold', size=36, transform=ax[0].transAxes)
 ax[0].axis('off')
 
 # Add HK2 image
-ax[1].matshow(np.rot90(hk2_img[:, :, 96]), cmap='plasma')
+ax[1].matshow(np.rot90(hk2_img[25:170, 25:205, 96]), cmap='plasma')
 ax[1].axis('off')
 ax[1].set_title('HK2', fontweight='bold', fontsize=28)
 
 # Colorbar for HK images
-cb_ax_1 = fig.add_axes([0.26, 0.15, 0.225, 0.04])
+cb_ax_1 = fig.add_axes([0.26, 0.125, 0.225, 0.04])
 c_bar_1 = fig.colorbar(hk, cax=cb_ax_1, orientation='horizontal')
 c_bar_1.set_label('Norm. Exp.', fontsize=18, labelpad=15, fontweight='bold')
 
 # Add ratio image
-ratio = ax[2].matshow(np.rot90(ratio_img[:, :, 96]), cmap='plasma')
+ratio = ax[2].matshow(np.rot90(ratio_img[25:170, 25:205, 96]), cmap='plasma')
 ax[2].axis('off')
 ax[2].set_title('HK1 / HK2', fontweight='bold', fontsize=28)
 
 # Colorbar for ratio
-cb_ax = fig.add_axes([0.66, 0.15, 0.225, 0.04])
+cb_ax = fig.add_axes([0.66, 0.125, 0.225, 0.04])
 c_bar = fig.colorbar(ratio, cax=cb_ax, orientation='horizontal')
 c_bar.set_label('HK 1 / HK 2', fontsize=18, labelpad=15, fontweight='bold')
-plt.subplots_adjust(wspace=0)
+plt.subplots_adjust(wspace=0.15)
 
 plt.savefig('figure_6a.png', dpi=300, bbox_inches='tight')
 plt.close('all')
@@ -80,7 +80,14 @@ for name, group in reg_df.groupby('Group'):
 
 # Format plot
 ax2.legend(
-    bbox_to_anchor=(1.04, 0.5), loc="center left", borderaxespad=0, fontsize=8
+    loc="upper center",
+    bbox_to_anchor=(0.5, 1.1),
+    borderaxespad=0,
+    fontsize=8,
+    ncol=np.unique(reg_df.Group).shape[0],
+    columnspacing=0.7,
+    handlelength=0.2,
+    frameon=False
 )
 ax2.set_xlabel('HK1 / HK2 Ratio', fontweight='bold', fontsize=10)
 ax2.set_ylabel(
@@ -90,7 +97,7 @@ ax2.tick_params(axis='both', labelsize=8, width=0.5, colors='gray')
 for axis in ['top','bottom','left','right']:
     ax2.spines[axis].set_linewidth(0.5)
     ax2.spines[axis].set_color('gray')
-ax2.text(-0.35, 0.9, 'B)', weight='bold', size=18, transform=ax2.transAxes)
+ax2.text(-0.3, 1, 'B)', weight='bold', size=18, transform=ax2.transAxes)
 cor = np.corrcoef(reg_df['Ratio'], reg_df['Delta'])[0, 1]
 print(np.corrcoef(reg_df['Ratio'], reg_df['Basal'])[0, 1])
 ax2.text(0.7, 0.9, f'r = {cor:.2f}', weight='bold', size=8.5, transform=ax2.transAxes)
