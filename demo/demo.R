@@ -30,5 +30,5 @@ n_both =sum(
 )
 print(paste('Number of subjects with both conditions:', n_both))
 
-n_first = data %>% filter(Visit.Order == 1) %>% count(Condition)
+n_first = data %>% filter(Visit.Order == 1, Visit.Count > 1) %>% count(Condition)
 print(n_first)

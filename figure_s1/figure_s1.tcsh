@@ -2,4 +2,4 @@
 echo $cwd
 
 
-python3 ../common/three_panel_cmrglc.py cmrglc_lc
+python3 ../common/three_panel_scatter.py cmrglc_lc

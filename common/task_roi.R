@@ -4,6 +4,7 @@ library(readxl)
 library(nlme)
 library(cowplot)
 library(ggbrain)
+library(multcomp)
 rm(list=ls())
 
 # Which figure are we doing 
@@ -49,7 +50,7 @@ roi_names = roi_names[[dir]]
 
 #Main data directory
 brain_path = file.path(
-    Sys.getenv('FSLDIR'), '/data/standard/MNI152_T1_2mm_brain.nii.gz'
+    '/opt/fsl', '/data/standard/MNI152_T1_2mm_brain.nii.gz'
 )
 
 #Load in data and get average runs
@@ -102,6 +103,19 @@ for (roi in 1:4){
     #Run model fit
     fit = lme(Value~Condition, random=~1|ID, data=roi_design)
     fit_p = summary(fit)$tTable[2,5]
+    
+    eq_val = abs(fixef(fit)[1] * 0.05)
+    eq_less = summary(
+      glht(fit, linfct = matrix(c(0, 1), nrow=1), rhs=eq_val, alternative='less')
+    )
+    eq_greater = summary(
+      glht(fit, linfct = matrix(c(0, 1), nrow=1), rhs=-eq_val, alternative='greater')
+    )
+    
+    print(eq_less)
+    print(eq_greater)
+    print(max(eq_less$test$pvalues[1], eq_greater$test$pvalues[1]))
+    print(eq_less$test$pvalues[1] < 0.05 & eq_greater$test$pvalues[1] < 0.05)
     
     #Check for motion differences
     if(roi == 1){

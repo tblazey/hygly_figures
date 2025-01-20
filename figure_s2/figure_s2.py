@@ -115,32 +115,40 @@ ax5 = fig2.add_subplot(sp2[0, 0])
 ax6 = fig2.add_subplot(sp2[0, 1])
 
 # Load in images with roi values
-roi_means = nib.load('cmrglc_wmparc_hypergly_coef.nii.gz').get_fdata().flatten()
-roi_ses = nib.load('cmrglc_wmparc_hypergly_se.nii.gz').get_fdata().flatten()
-roi_names = pd.read_excel('../common/data_values_file.xlsx', "Allen.Gene", usecols=[5])
-
-# Add whole-brain data
-wb_df = pd.read_csv('../table_s3/table_s3.csv', index_col=0)
-roi_means = np.append(roi_means, wb_df.Diff.CMRglc)
-roi_cis = np.append(roi_ses * 1.96, wb_df['Diff.CI'].CMRglc)
-roi_names = np.append(roi_names, 'Whole Brain')
+roi_df = pd.read_csv('regional_cmrglc_deltas.csv').iloc[:, 1:]
 
 # Create color code
-cols = np.repeat('#006bb6', roi_names.shape[0])
-cols[-1] = '#000000'
-cols[np.argsort(np.abs(roi_means))[0:3]] = '#6bb600'
+roi_df['Color'] = np.repeat('#006bb6', roi_df.shape[0])
+abs_sort = np.argsort(np.abs(roi_df.est_Delta))
+roi_df.loc[abs_sort[0:3].to_numpy(), 'Color'] = '#6bb600'
+print(roi_df.Region.iloc[abs_sort][0:3])
+
+# Add whole-brain data
+wb_df = pd.read_csv('../table_s1/table_s1.csv', index_col=0).iloc[5, :]
+roi_df.loc[len(roi_df)] = [
+    'Whole Brain',
+    wb_df.iloc[0] - wb_df.iloc[1],
+    wb_df.iloc[4] - wb_df.iloc[5],
+    wb_df.iloc[0], 
+    wb_df.iloc[4],
+    wb_df.iloc[0] + wb_df.iloc[1],
+    wb_df.iloc[4] + wb_df.iloc[5],
+    '#000000'
+]
+
+# Sort data frame
+roi_df = roi_df.iloc[np.argsort(roi_df.est_Delta), :]
 
 # Make plot
-roi_sort = np.argsort(roi_means)
 ax5.grid()
 ax5.grid(linewidth=0.25, c='gray')
 ax5.scatter(
-    roi_means[roi_sort], roi_names[roi_sort], s=4, zorder=3, c=cols[roi_sort]
+    roi_df.est_Delta, roi_df.Region, s=4, zorder=3, c=roi_df.Color
 )
 ax5.errorbar(
-    roi_means[roi_sort],
-    roi_names[roi_sort],
-    xerr=roi_cis[roi_sort],
+    roi_df.est_Delta,
+    roi_df.Region,
+    xerr=roi_df.est_Delta - roi_df.lower_Delta,
     zorder=2,
     lw=0.75,
     c='black',

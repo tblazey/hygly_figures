@@ -18,3 +18,4 @@ sess_info$Group = factor(sess_info$Condition,
 fit = lme(Value~Group, random=~1|Subject, data=sess_info)
 fit_sum = summary(fit)
 print(fit_sum)
+print(intervals(fit_sum, which='fixed'))

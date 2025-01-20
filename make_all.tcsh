@@ -3,7 +3,7 @@
 foreach fig ( `ls -d demo table* figure_* ` )
 
     cd $fig
-    ./${fig}.tcsh
+    tcsh ./${fig}.tcsh
     if ( $? == 1 ) exit
     cd ../
 

@@ -1,48 +1,31 @@
-#Load libraries
 library(tidyverse)
 library(readxl)
-library(nlme)
-rm(list=ls())
 
-#Load in data
-wb_data = read_excel('../common/data_values_file.xlsx', "Whole.Brain.FDG")
-
-#Get values for table
-pars = unique(wb_data$Parameter)
-n_par = length(pars)
-wb_table = array(0, dim=c(n_par, 7))
-rownames(wb_table) = pars
-colnames(wb_table) = c(
-  'Eugly', 'Eugly.CI', 'Hygly', 'Hygly.CI', 'Diff', 'Diff.CI', 'Diff.p.value'
+col_order = c(
+  1, 2, 12, 3, 13, 7, 17, 5, 15, 4, 14, 6, 16, 19, 11, 8, 10, 9, 18
 )
 
-for (i in 1:n_par){
+regional_data = read_excel('../common/data_values_file.xlsx', 'Freesurfer.Rois')
+regional_bool = regional_data  %>% 
+  filter(Region == 'Deep White Matter' & Modality != 'Task.Retrieval') %>% 
+  mutate_at('Value', .funs=is.numeric) %>%
+  dplyr::select(-Region, -Visit.Order) %>% 
+  group_by(ID, Condition, Modality) %>% 
+  summarise_all(any) %>%
+  pivot_wider(
+    names_from=c(Modality, Condition), values_from=Value, values_fill=FALSE
+  ) %>% ungroup()
+demo_table = regional_bool[, col_order]
 
-    #Make frame for fit
-    df = wb_data %>% filter(Parameter == pars[i])
+# Get number of subjects with data at each condition
+demo_sums = colSums(demo_table[, -1])
 
-    #Run fit
-    wb_fit = lme(Value~Condition, random=~1|ID, data=df)
-    wb_sum = summary(wb_fit)
+# Add totals to text and replace bools with checkmarks/empties
+demo_table[, -1] = sapply(demo_table[, -1], as.character)
+demo_table = rbind(demo_table, c('Totals', as.character(demo_sums)))
+demo_table[demo_table == 'TRUE'] = '\U2713'
+demo_table[demo_table == 'FALSE'] = ''
 
-    #Extract means and CI for baseline
-    wb_table[i, 1] = wb_sum$tTable[1, 1]
-    wb_table[i, 3] = wb_sum$tTable[1, 1] + wb_sum$tTable[2, 1]
-    wb_table[i, 2] = wb_sum$tTable[1, 2] * 1.96
-
-    #Compute 95% confidence interval for hypeglycemia
-    wb_table[i, 4] = sqrt(as.numeric(c(1,1) %*% vcov(wb_fit) %*% c(1,1))) * 1.96
-
-    #Get mean difference and CI
-    wb_table[i, 5] = wb_sum$tTable[2, 1]
-    wb_table[i, 6] = wb_sum$tTable[2, 2] * 1.96
-
-    #Save p-value
-    wb_table[i, 7] = wb_sum$tTable[2, 5]
-
-}
-write.csv(wb_table, 'table_s3.csv', quote=FALSE)
-print(wb_table)
-
-
+# Write out table
+write.csv(demo_table, 'table_s3.csv', quote=FALSE, row.names=FALSE)
 

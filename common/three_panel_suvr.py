@@ -1,3 +1,4 @@
+import os
 import sys
 import fastkde
 import matplotlib as mpl
@@ -9,40 +10,37 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from scipy.interpolate import interpn
+from scipy.ndimage import binary_dilation
 
 #Change default math font
 mpl.rcParams['mathtext.default'] = 'regular'
 
-# Constants
-    
+# Constants 
 if sys.argv[1] == 'rogi':
     figure = 'figure_4'
     mod_label = 'rOGI'
     img_min = 0.8
     img_max = 1.4
-    diff_max = 0.5
 elif sys.argv[1] == 'roef':
     figure = 'figure_s3'
     mod_label = 'rOEF'
     img_min = 0.8
     img_max = 1.2
-    diff_max = 0.25
 elif sys.argv[1] == 'fdg':
     figure = 'figure_s4'
     mod_label = r'[$^{18}F$]FDG'
     img_min = 0.5
     img_max = 1.5
-    diff_max = 0.25
 elif sys.argv[1] == 'co':
     figure = 'figure_s5'
     mod_label = r'[$^{15}O$]CO'
     img_min = 0.5
     img_max = 3.0
-    diff_max = 0.25
 else:
     sys.exit()
 mod = f'{sys.argv[1]}_suvr'
 cb_label = 'SUVR'
+diff_max = 0.4
 
 if sys.argv[1] == 'rogi' or sys.argv[1] == 'roef':
     plt_title = fr'{mod_label}: Hyper'
@@ -78,11 +76,8 @@ roi_data = np.float32(np.squeeze(roi.get_fdata()))
 # Get correlation values before masking
 mask_invert = np.logical_not(mask_data)
 base_corr = np.corrcoef(
-    eugly_data[mask_invert].flatten(), diff_data[mask_invert].flatten())
+    (eugly_data[mask_invert].flatten() + hygly_data[mask_invert].flatten()) / 2, diff_data[mask_invert].flatten())
 print(base_corr[0, 1])
-
-#Mask outside of fdr threshold
-diff_data[np.abs(fdr_data) < 1.3] = np.nan
 
 #Apply brain mask
 eugly_data[mask_data] = np.nan
@@ -236,17 +231,51 @@ ax11= fig3.add_subplot(sp3[0, 2])
 ax12 = fig3.add_subplot(sp3[0, 3])
 ax13 = fig3.add_subplot(sp3[0, 4])
 
+# Dilate thresholded image so we can see boundary. Do it for each orthogonal slice
+# so we aren't getting anything coming from another slice
+diff_thr = np.copy(diff_data)
+diff_thr[np.abs(fdr_data) < 1.3] = np.nan
+diff_thr_mask = np.float32(~np.isnan(diff_thr))
+diff_thr_dil_x = np.float32(binary_dilation(diff_thr_mask[x, :, :])) - diff_thr_mask[x, :, :]
+diff_thr_dil_y = np.float32(binary_dilation(diff_thr_mask[:, y, :])) - diff_thr_mask[:, y, :]
+diff_thr_dil_z = np.float32(binary_dilation(diff_thr_mask[:, :, z])) - diff_thr_mask[:, :, z]
+
+# Mask out zeros
+diff_thr_dil_x[np.logical_or(diff_thr_dil_x == 0, mask_data[x, :, :])] = np.nan
+diff_thr_dil_y[np.logical_or(diff_thr_dil_y == 0, mask_data[:, y, :])] = np.nan
+diff_thr_dil_z[np.logical_or(diff_thr_dil_z == 0, mask_data[:, :, z])] = np.nan
+
 #Make first row
 ax9.imshow(np.rot90(mpr_data[x, :, :]), cmap=mpr_map)
-ax9.imshow(np.rot90(diff_data[x, :, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
-ax9.imshow(np.rot90(-diff_data[x, :, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax9.imshow(
+    np.rot90(diff_data[x, :, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax9.imshow(
+    np.rot90(-diff_data[x, :, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax9.imshow(np.rot90(diff_thr[x, :, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
+ax9.imshow(np.rot90(-diff_thr[x, :, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax9.imshow(np.rot90(diff_thr_dil_x), cmap='gray', vmax=1)
 ax10.imshow(np.rot90(mpr_data[:, :, z]), cmap=mpr_map)
-ax10.imshow(np.rot90(diff_data[:, :, z]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
-ax10.imshow(np.rot90(-diff_data[:, :, z]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax10.imshow(
+    np.rot90(diff_data[:, :, z]), cmap=pos_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax10.imshow(
+    np.rot90(-diff_data[:, :, z]), cmap=neg_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax10.imshow(np.rot90(diff_thr[:, :, z]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
+ax10.imshow(np.rot90(-diff_thr[:, :, z]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax10.imshow(np.rot90(diff_thr_dil_z), cmap='gray', vmax=1)
 ax11.imshow(np.rot90(mpr_data[:, y, :]), cmap=mpr_map)
-ax11.imshow(np.rot90(diff_data[:, y, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
-ax11.imshow(np.rot90(diff_data[:, y, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
-ax11.imshow(np.rot90(-diff_data[:, y, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax11.imshow(
+    np.rot90(diff_data[:, y, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax11.imshow(
+    np.rot90(-diff_data[:, y, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max, alpha=0.3
+)
+ax11.imshow(np.rot90(diff_thr[:, y, :]), cmap=pos_map, vmin=diff_min, vmax=diff_max)
+ax11.imshow(np.rot90(-diff_thr[:, y, :]), cmap=neg_map, vmin=diff_min, vmax=diff_max)
+ax11.imshow(np.rot90(diff_thr_dil_y), cmap='gray', vmax=1)
 
 #Move first row
 pax1 = ax1.get_position()
@@ -309,3 +338,5 @@ output.paste(diff_crop, (0, eugly_crop.size[1] * 2))
 
 #Save image
 output.save(f'{figure}.tiff')
+for f in [f'{figure}a.png', f'{figure}b.png', f'{figure}c.png']:
+    os.remove(f)
